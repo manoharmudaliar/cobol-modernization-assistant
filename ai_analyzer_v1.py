@@ -10,7 +10,7 @@ import requests
 from cobol_parser import CobolAnalysis
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL   = "llama-3.3-70b-versatile"
+GROQ_MODEL   = "llama3-70b-8192"
 
 
 def _call_gemini(prompt: str) -> str:
