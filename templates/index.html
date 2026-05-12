@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COBOL Modernization Assistant</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, #1a1f35 0%, #0d1b2a 100%); border-bottom: 1px solid #2d3748; padding: 20px 32px; display: flex; align-items: center; gap: 16px; }
+  .header-icon { width: 44px; height: 44px; background: linear-gradient(135deg, #4299e1, #667eea); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #fff; }
+  .header p { font-size: 13px; color: #718096; margin-top: 2px; }
+  .badge { margin-left: auto; background: #1a365d; color: #63b3ed; border: 1px solid #2b6cb0; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 0; height: calc(100vh - 85px); }
+
+  /* Left Panel */
+  .left-panel { border-right: 1px solid #2d3748; display: flex; flex-direction: column; }
+  .panel-header { padding: 16px 20px; border-bottom: 1px solid #2d3748; background: #161b2e; display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { font-size: 13px; font-weight: 600; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .sample-bar { padding: 12px 20px; border-bottom: 1px solid #2d3748; background: #12172a; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sample-label { font-size: 12px; color: #718096; }
+  .sample-btn { background: #2d3748; border: 1px solid #4a5568; color: #a0aec0; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .sample-btn:hover { background: #4a5568; color: #e2e8f0; }
+
+  textarea { flex: 1; background: #0d1117; color: #a8d8a8; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; border: none; outline: none; padding: 20px; resize: none; }
+  textarea::placeholder { color: #4a5568; }
+
+  .action-bar { padding: 14px 20px; border-top: 1px solid #2d3748; background: #161b2e; display: flex; gap: 10px; align-items: center; }
+  .analyze-btn { background: linear-gradient(135deg, #4299e1, #667eea); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; flex: 1; }
+  .analyze-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .ai-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #718096; cursor: pointer; white-space: nowrap; }
+  .ai-toggle input { accent-color: #4299e1; }
+
+  /* Right Panel */
+  .right-panel { overflow-y: auto; background: #0f1117; }
+  .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #4a5568; gap: 12px; }
+  .placeholder-icon { font-size: 48px; }
+  .placeholder p { font-size: 14px; text-align: center; max-width: 280px; line-height: 1.6; }
+
+  /* Results */
+  .results { padding: 20px; }
+
+  /* Program Header Card */
+  .prog-card { background: linear-gradient(135deg, #1a2744, #0d1b2a); border: 1px solid #2b6cb0; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .prog-card h2 { font-size: 20px; font-weight: 700; color: #63b3ed; }
+  .prog-meta { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+  .prog-meta span { font-size: 12px; color: #718096; }
+  .prog-meta strong { color: #a0aec0; }
+
+  /* Complexity Badge */
+  .complexity { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-top: 10px; }
+  .complexity.LOW    { background: #1c4532; color: #68d391; border: 1px solid #2f855a; }
+  .complexity.MEDIUM { background: #744210; color: #f6ad55; border: 1px solid #c05621; }
+  .complexity.HIGH   { background: #742a2a; color: #fc8181; border: 1px solid #c53030; }
+  .complexity.VERY\ HIGH { background: #4a0404; color: #ff6b6b; border: 1px solid #9b2c2c; }
+
+  /* Metrics Grid */
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .metric-card { background: #161b2e; border: 1px solid #2d3748; border-radius: 8px; padding: 12px; text-align: center; }
+  .metric-value { font-size: 24px; font-weight: 700; color: #63b3ed; }
+  .metric-label { font-size: 11px; color: #718096; margin-top: 2px; text-transform: uppercase; }
+  .metric-card.danger .metric-value { color: #fc8181; }
+  .metric-card.warning .metric-value { color: #f6ad55; }
+  .metric-card.success .metric-value { color: #68d391; }
+
+  /* Section */
+  .section { background: #161b2e; border: 1px solid #2d3748; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  .section-header { padding: 12px 16px; background: #1a2036; border-bottom: 1px solid #2d3748; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .section-header h3 { font-size: 13px; font-weight: 600; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; }
+  .section-icon { font-size: 16px; }
+  .chevron { color: #4a5568; font-size: 12px; transition: transform 0.2s; }
+  .section-body { padding: 16px; }
+  .section.collapsed .section-body { display: none; }
+  .section.collapsed .chevron { transform: rotate(-90deg); }
+
+  /* Warnings */
+  .warning-item { background: #1a1a2e; border-left: 3px solid #f6ad55; padding: 8px 12px; border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 13px; color: #e2e8f0; line-height: 1.5; }
+
+  /* AI Explanation */
+  .expl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .expl-item { background: #0d1117; border: 1px solid #2d3748; border-radius: 8px; padding: 12px; }
+  .expl-item.full { grid-column: 1 / -1; }
+  .expl-label { font-size: 11px; color: #4299e1; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+  .expl-text { font-size: 13px; color: #cbd5e0; line-height: 1.6; }
+
+  /* Python Code */
+  .code-block { background: #0d1117; border: 1px solid #2d3748; border-radius: 8px; padding: 16px; overflow-x: auto; }
+  .code-block pre { font-family: 'Courier New', monospace; font-size: 12px; color: #a8d8a8; line-height: 1.6; white-space: pre-wrap; }
+
+  /* Migration Plan */
+  .plan-header { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .plan-stat { background: #0d1117; border: 1px solid #2d3748; border-radius: 8px; padding: 12px; text-align: center; }
+  .plan-stat-value { font-size: 16px; font-weight: 700; color: #63b3ed; }
+  .plan-stat-label { font-size: 11px; color: #718096; margin-top: 2px; }
+  .phase { background: #0d1117; border: 1px solid #2d3748; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .phase-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .phase-num { background: #4299e1; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .phase-name { font-size: 14px; font-weight: 600; color: #e2e8f0; }
+  .phase-duration { margin-left: auto; font-size: 12px; color: #718096; }
+  .phase-tasks { list-style: none; padding-left: 34px; }
+  .phase-tasks li { font-size: 13px; color: #a0aec0; padding: 3px 0; }
+  .phase-tasks li::before { content: "→ "; color: #4299e1; }
+
+  /* Files & Paragraphs */
+  .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { background: #1a2036; border: 1px solid #2d3748; padding: 4px 10px; border-radius: 20px; font-size: 12px; color: #a0aec0; }
+  .tag.file { border-color: #2b6cb0; color: #63b3ed; }
+  .tag.para { border-color: #2f855a; color: #68d391; }
+
+  /* Spinner */
+  .spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading .spinner { display: block; }
+  .loading .btn-text { display: none; }
+
+  /* Tech badges */
+  .tech-badge { display: inline-flex; align-items: center; gap: 4px; background: #1a2744; border: 1px solid #2b6cb0; padding: 3px 10px; border-radius: 20px; font-size: 11px; color: #63b3ed; margin: 2px; }
+  .tech-badge.active { background: #1c4532; border-color: #2f855a; color: #68d391; }
+  .tech-badge.inactive { background: #1a1a2e; border-color: #4a5568; color: #718096; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">⚙️</div>
+  <div>
+    <h1>COBOL Modernization Assistant</h1>
+    <p>Rule-based analysis + AI-powered explanation & Python conversion</p>
+  </div>
+  <div class="badge">Built by Manoharan Mudaliar</div>
+</div>
+
+<div class="layout">
+  <!-- LEFT: Input -->
+  <div class="left-panel">
+    <div class="panel-header">
+      <span class="panel-title">COBOL Source Code</span>
+      <span style="font-size:12px;color:#4a5568;">Paste or load a sample</span>
+    </div>
+    <div class="sample-bar">
+      <span class="sample-label">Samples:</span>
+      {% for s in samples %}
+      <button class="sample-btn" onclick="loadSample('{{ s }}')">{{ s }}</button>
+      {% endfor %}
+    </div>
+    <textarea id="cobolInput" placeholder="Paste your COBOL source code here...&#10;&#10;Or click a sample file above to load a real COBOL program."></textarea>
+    <div class="action-bar">
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+        <span class="btn-text">🔍 Analyze Program</span>
+        <span class="spinner"></span>
+      </button>
+      <label class="ai-toggle">
+        <input type="checkbox" id="useAI" checked>
+        AI Analysis
+      </label>
+    </div>
+  </div>
+
+  <!-- RIGHT: Results -->
+  <div class="right-panel" id="rightPanel">
+    <div class="placeholder">
+      <div class="placeholder-icon">🏗️</div>
+      <p>Paste COBOL code on the left and click <strong>Analyze Program</strong> to see the full modernization analysis.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadSample(filename) {
+  const res = await fetch(`/load_sample/${filename}`);
+  const data = await res.json();
+  document.getElementById('cobolInput').value = data.source || data.error;
+}
+
+async function analyze() {
+  const source = document.getElementById('cobolInput').value.trim();
+  if (!source) { alert('Please paste COBOL source code first.'); return; }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  const useAI = document.getElementById('useAI').checked;
+
+  try {
+    const res = await fetch('/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source, use_ai: useAI })
+    });
+    const data = await res.json();
+    if (data.error) { alert('Error: ' + data.error); return; }
+    renderResults(data);
+  } catch(e) {
+    alert('Request failed: ' + e.message);
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function renderResults(d) {
+  const m = d.metrics;
+  const complexClass = d.complexity_label.replace(' ', '\\ ');
+
+  let html = `
+  <div class="results">
+
+    <!-- Program Header -->
+    <div class="prog-card">
+      <h2>${d.program_id}</h2>
+      <div class="prog-meta">
+        <span><strong>Author:</strong> ${d.author}</span>
+        <span><strong>Divisions:</strong> ${d.divisions.join(', ')}</span>
+        <span><strong>Lines:</strong> ${m.total_lines}</span>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="tech-badge ${m.db2_sql ? 'active' : 'inactive'}">DB2 SQL ${m.db2_sql ? '✓' : '✗'}</span>
+        <span class="tech-badge ${m.cics ? 'active' : 'inactive'}">CICS ${m.cics ? '✓' : '✗'}</span>
+        <span class="tech-badge ${m.ims ? 'active' : 'inactive'}">IMS ${m.ims ? '✓' : '✗'}</span>
+      </div>
+      <div class="complexity ${d.complexity_label}">● ${d.complexity_label} COMPLEXITY — Score: ${d.complexity_score}</div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card"><div class="metric-value">${m.total_lines}</div><div class="metric-label">Total Lines</div></div>
+      <div class="metric-card"><div class="metric-value">${m.paragraph_count}</div><div class="metric-label">Paragraphs</div></div>
+      <div class="metric-card"><div class="metric-value">${m.file_count}</div><div class="metric-label">Files</div></div>
+      <div class="metric-card"><div class="metric-value">${m.variable_count}</div><div class="metric-label">Variables</div></div>
+      <div class="metric-card"><div class="metric-value">${m.if_count}</div><div class="metric-label">IF Statements</div></div>
+      <div class="metric-card"><div class="metric-value">${m.evaluate_count}</div><div class="metric-label">EVALUATE Blocks</div></div>
+      <div class="metric-card ${m.goto_count > 0 ? 'danger' : 'success'}"><div class="metric-value">${m.goto_count}</div><div class="metric-label">GO TO (Risk)</div></div>
+      <div class="metric-card"><div class="metric-value">${m.perform_count}</div><div class="metric-label">PERFORM Calls</div></div>
+    </div>`;
+
+  // Warnings
+  if (d.warnings.length > 0) {
+    html += `<div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-icon">⚠️</span>
+        <h3>Migration Warnings (${d.warnings.length})</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        ${d.warnings.map(w => `<div class="warning-item">${w}</div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Files & Paragraphs
+  html += `<div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-icon">📁</span>
+      <h3>Files & Paragraphs</h3>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="section-body">
+      <div style="margin-bottom:10px;">
+        <div class="expl-label">Files Used</div>
+        <div class="tag-list">${d.files.map(f => `<span class="tag file" title="${f.org}">${f.name} → ${f.assign}</span>`).join('')}</div>
+      </div>
+      <div>
+        <div class="expl-label">Paragraphs</div>
+        <div class="tag-list">${d.paragraphs.map(p => `<span class="tag para" title="Calls: ${p.calls.join(', ') || 'none'}">${p.name}</span>`).join('')}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // AI Explanation
+  if (d.ai_explanation) {
+    const e = d.ai_explanation;
+    html += `<div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-icon">🤖</span>
+        <h3>AI Explanation</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="expl-grid">
+          <div class="expl-item full"><div class="expl-label">Purpose</div><div class="expl-text">${e.purpose || ''}</div></div>
+          <div class="expl-item full"><div class="expl-label">Business Function</div><div class="expl-text">${e.business_function || ''}</div></div>
+          <div class="expl-item"><div class="expl-label">Inputs</div><div class="expl-text">${e.inputs || ''}</div></div>
+          <div class="expl-item"><div class="expl-label">Outputs</div><div class="expl-text">${e.outputs || ''}</div></div>
+          <div class="expl-item full"><div class="expl-label">How It Works</div><div class="expl-text">${(e.how_it_works || '').replace(/\n/g, '<br>')}</div></div>
+          <div class="expl-item full"><div class="expl-label">Key Business Logic</div><div class="expl-text">${e.key_logic || ''}</div></div>
+          <div class="expl-item full"><div class="expl-label">Modernization Notes</div><div class="expl-text">${e.modernization_notes || ''}</div></div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Migration Plan
+  if (d.migration_plan) {
+    const p = d.migration_plan;
+    html += `<div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-icon">🗺️</span>
+        <h3>Migration Plan</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="plan-header">
+          <div class="plan-stat"><div class="plan-stat-value">${p.effort_estimate || 'TBD'}</div><div class="plan-stat-label">Estimated Effort</div></div>
+          <div class="plan-stat"><div class="plan-stat-value">${p.risk_level || 'MEDIUM'}</div><div class="plan-stat-label">Risk Level</div></div>
+          <div class="plan-stat"><div class="plan-stat-value">${p.recommended_target || 'Python'}</div><div class="plan-stat-label">Target Platform</div></div>
+        </div>
+        <div style="margin-bottom:10px;font-size:12px;color:#718096;">Approach: <strong style="color:#a0aec0">${p.approach || 'Phased'}</strong></div>
+        ${(p.phases || []).map(ph => `
+        <div class="phase">
+          <div class="phase-header">
+            <div class="phase-num">${ph.phase}</div>
+            <div class="phase-name">${ph.name}</div>
+            <div class="phase-duration">${ph.duration}</div>
+          </div>
+          <ul class="phase-tasks">${(ph.tasks || []).map(t => `<li>${t}</li>`).join('')}</ul>
+        </div>`).join('')}
+        ${p.testing_strategy ? `<div class="expl-item" style="margin-top:10px;background:#0d1117;border:1px solid #2d3748;border-radius:8px;padding:12px;"><div class="expl-label">Testing Strategy</div><div class="expl-text">${p.testing_strategy}</div></div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // Python Code
+  if (d.python_code) {
+    html += `<div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-icon">🐍</span>
+        <h3>Python Conversion</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="code-block"><pre>${escapeHtml(d.python_code)}</pre></div>
+      </div>
+    </div>`;
+  }
+
+  html += '</div>';
+  document.getElementById('rightPanel').innerHTML = html;
+}
+
+function toggleSection(header) {
+  header.closest('.section').classList.toggle('collapsed');
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
